@@ -1,2 +1,0 @@
-# TerraformProjectBeta
- Beta version
