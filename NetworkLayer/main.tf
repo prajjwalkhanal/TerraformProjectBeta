@@ -3,7 +3,7 @@
 #--------------------------------------------------------------------
 
 provider "aws" {
-    default = "ap-southeast-2" // Defaulted region to Sydney
+    region = "ap-southeast-2"  // Default region --> Sydney
 }
 
 terraform {
