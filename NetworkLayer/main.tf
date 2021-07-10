@@ -7,14 +7,14 @@ provider "aws" {
 }
 
 terraform {
-  backend "s3" {
+  backend "S3" {
     bucket = "terraformstatefile-projectbeta"            // Bucket where to SAVE Terraform State
     key    = "dev/network-layer/terraform.tfstate"      // Object name in the bucket to SAVE Terraform State
     region = "ap-southeast-2"                           // Region where bucket created
   }
 }
 
-data "aws_availability_zones" "available"{}              //Get map of all available zone in default region
+data "aws_availability_zones" "available"{}              //Get map of all available zone in current region
 
 resource "aws_vpc" "main"{
     cidr_block = var.vpc_cidr                          //Create VPC 
