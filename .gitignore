@@ -4,3 +4,10 @@ Web-Server/.terraform/providers/registry.terraform.io/hashicorp/aws/3.44.0/darwi
 NetworkLayer/.terraform.lock.hcl
 NetworkLayer/.terraform/providers/registry.terraform.io/hashicorp/aws/3.47.0/darwin_amd64/terraform-provider-aws_v3.47.0_x5
 NetworkLayer/.terraform/terraform.tfstate
+IP-Restricted-VPC/NetworkLayer/.terraform/terraform.tfstate
+.gitignore
+IP-Restricted-VPC/NetworkLayer/.terraform/providers/registry.terraform.io/hashicorp/aws/3.49.0/darwin_amd64/terraform-provider-aws_v3.49.0_x5
+IP-Restricted-VPC/PublicNetwork/.terraform.lock.hcl
+.gitignore
+IP-Restricted-VPC/PublicNetwork/.terraform/providers/registry.terraform.io/hashicorp/aws/3.49.0/darwin_amd64/terraform-provider-aws_v3.49.0_x5
+IP-Restricted-VPC/PublicNetwork/.terraform/terraform.tfstate
