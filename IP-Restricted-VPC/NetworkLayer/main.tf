@@ -32,7 +32,6 @@ resource "aws_internet_gateway" "main" {
 
 #---------------------------------------------------------------------------------------------#
 
-
 #------------------------ public subnet and route table --------------------------------------#
 
 resource "aws_subnet" "public_subnet_main" {
@@ -60,7 +59,7 @@ resource "aws_route_table_association" "public-assocation-table" {
     ]
     count = length(var.public_subnet_cidrs)
     route_table_id = aws_route_table.public-route-table.id
-    subnet_id = aws_subnet.private_subnet_main[count.index].id
+    subnet_id = aws_subnet.public_subnet_main[count.index].id
 }
 
 #---------------------------------------------------------------------------------------------#
@@ -121,6 +120,113 @@ resource "aws_network_acl_rule" "OfficeNtwI" {
 
 #---------------------------------------------------------------------------------------------#
 
+
+#---------------- Network ACL with IP access for Public Subent -------------------------------#
+
+resource "aws_network_acl" "DedicatedIP" {
+    vpc_id = aws_vpc.main.id
+    subnet_ids = [aws_subnet.public-subnet-main[0].id]
+    tags = var.tags
+}
+
+resource "aws_network_acl_rule" "VPCNetworkE" {
+    network_acl_id = aws_network_acl.DedicatedIP.id
+    rule_number = 100
+    egress = false
+    protocol = -1
+    rule_action ="allow"
+    cidr_block = var.vpc_cidr
+    from_port = 0
+    to_port = 0
+}
+
+resource "aws_network_acl_rule" "OfficeNtwE" {
+    count = length(var.allowed_ip)
+    network_acl_id = aws_network_acl.DedicatedIP.id
+    rule_number = var.allowed_rule[count.index]
+    egress = false
+    protocol = -1
+    rule_action ="allow"
+    cidr_block = var.allowed_ip[count.index]
+    from_port = 0
+    to_port = 0
+}
+
+resource "aws_network_acl_rule" "VPCNetworkI" {
+    network_acl_id = aws_network_acl.DedicatedIP.id
+    rule_number = 100
+    egress = true
+    protocol = -1
+    rule_action ="allow"
+    cidr_block = var.vpc_cidr
+    from_port = 0
+    to_port = 0
+}
+
+resource "aws_network_acl_rule" "OfficeNtwI" {
+    count = length(var.allowed_ip)
+    network_acl_id = aws_network_acl.DedicatedIP.id
+    rule_number = var.allowed_rule[count.index]
+    egress = true
+    protocol = -1
+    rule_action ="allow"
+    cidr_block = var.allowed_ip[count.index]
+    from_port = 0
+    to_port = 0
+}
+
+#---------------------------------------------------------------------------------------------#
+
+#---------------------- Security Group to allow all traffic-----------------------------------#
+
+resource "aws_security_group" "allow_all" {
+  description = "Allow All  traffic"
+  name="${var.env}-AllowAllSecurityGroup"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description      = "Allow All "
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+tags = merge(var.tags,{Name="${var.env}-AllowAllSecurityGroup"})
+
+}
+
+#---------------------------------------------------------------------------------------------#
+
+#--------------- Latest Windows Server 2019 EC2 Instance -------------------------------------#
+data "aws_ami" "latest_windowsserver2019" {
+    owners = ["801119661308"]
+    most_recent = true
+    filter{
+        name="name"
+        values=["Windows_Server-2019-English-Full-Base-*"]
+    }
+}
+
+resource "aws_instance" "BetaAWS001" {
+    ami = data.aws_ami.latest_windowsserver2019.id
+    associate_public_ip_address = true
+    availability_zone = data.aws_availability_zones.availability.names[0]
+    instance_type = "t2.micro"
+    subnet_id = aws_subnet.public-subnet-main[0].id
+    vpc_security_group_ids = aws_security_group.allow_all.*.id
+
+    tags = merge(var.tags,{Name="${var.env}-Sever001"})
+}
+#---------------------------------------------------------------------------------------------#
+
 #--------------- NAT Gateways with Elastic IP ------------------------------------------------#
 resource "aws_eip" "nat" {
     count = length(var.private_subnet_cidrs)
@@ -165,5 +271,4 @@ resource "aws_route_table_association" "private_routes" {
     route_table_id = aws_route_table.private-route-table[count.index].id
     subnet_id = element(aws_subnet.private_subnet_main[*].id,count.index)
 }
-
 #--------------------------------------------------------------------------------------------#
