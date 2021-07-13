@@ -35,7 +35,7 @@ resource "aws_internet_gateway" "main" {
 
 #------------------------ public subnet and route table --------------------------------------#
 
-resource "aws_subnet" "public_subnet_main" {
+resource "aws_subnet" "public-subnet-main" {
     count = length(var.public_subnet_cidrs)
     vpc_id = aws_vpc.main.id
     cidr_block = element(var.public_subnet_cidrs,count.index)
@@ -56,11 +56,11 @@ resource "aws_route_table" "public-route-table" {
 resource "aws_route_table_association" "public-assocation-table" {
     depends_on = [
       aws_route_table.public-route-table,
-      aws_subnet.public_subnet_main,
+      aws_subnet.public-subnet-main,
     ]
     count = length(var.public_subnet_cidrs)
     route_table_id = aws_route_table.public-route-table.id
-    subnet_id = aws_subnet.private_subnet_main[count.index].id
+    subnet_id = aws_subnet.public-subnet-main[count.index].id
 }
 
 #---------------------------------------------------------------------------------------------#
@@ -69,7 +69,7 @@ resource "aws_route_table_association" "public-assocation-table" {
 
 resource "aws_network_acl" "DedicatedIP" {
     vpc_id = aws_vpc.main.id
-    subnet_ids = [aws_subnet.private_subnet_main[0].id]
+    subnet_ids = [aws_subnet.public-subnet-main[0].id]
     tags = var.tags
 }
 
@@ -121,49 +121,63 @@ resource "aws_network_acl_rule" "OfficeNtwI" {
 
 #---------------------------------------------------------------------------------------------#
 
-#--------------- NAT Gateways with Elastic IP ------------------------------------------------#
-resource "aws_eip" "nat" {
-    count = length(var.private_subnet_cidrs)
-    vpc = true
-    tags = merge(var.tags,{Name="${var.env}-nat-gw-${count.index + 1}"})
+#---------------------- Security Group to allow all traffic-----------------------------------#
+
+resource "aws_security_group" "allow_all" {
+  description = "Allow All  traffic"
+  name="${var.env}-AllowAllSecurityGroup"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description      = "Allow All "
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+  }
+
+tags = merge(var.tags,{Name="${var.env}-AllowAllSecurityGroup"})
+
 }
 
-resource "aws_nat_gateway" "nat" {
-    count = length(var.private_subnet_cidrs)
-    allocation_id = aws_eip.nat[count.index].id
-    subnet_id = aws_subnet.private_subnet_main[count.index].id
-    tags = merge(var.tags, {Name = "${var.env}-nat-gw-${count.index+1}"})
+#---------------------------------------------------------------------------------------------#
+
+#--------------- Latest Windows Server 2019 EC2 Instance -------------------------------------#
+data "aws_ami" "latest_windowsserver2019" {
+    owners = ["801119661308"]
+    most_recent = true
+    filter{
+        name="name"
+        values=["Windows_Server-2019-English-Full-Base-*"]
+    }
 }
+
+resource "aws_instance" "BetaAWS001" {
+    ami = data.aws_ami.latest_windowsserver2019.id
+    associate_public_ip_address = true
+    availability_zone = data.aws_availability_zones.availability.names[0]
+    instance_type = "t2.micro"
+    subnet_id = aws_subnet.public-subnet-main[0].id
+    vpc_security_group_ids = aws_security_group.allow_all.*.id
+
+    tags = merge(var.tags,{Name="${var.env}-Sever001"})
+}
+#---------------------------------------------------------------------------------------------#
+
+
+
+#--------------- NAT Gateways with Elastic IP ------------------------------------------------#
 
 #---------------------------------------------------------------------------------------------#
 
 #------------------------- private subnet and nat gateway for each subnet --------------------#
 
-resource "aws_subnet" "private_subnet_main" {
-    count = length(var.private_subnet_cidrs)
-    vpc_id = aws_vpc.main.id
-    cidr_block = element(var.private_subnet_cidrs,count.index)
-    availability_zone = data.aws_availability_zones.availability.names[count.index]
-    tags= merge(var.tags,{Name="${var.env}-private-subnet-${count.index+1}"})
-}
-
-resource "aws_route_table" "private-route-table" {    
-    count = length(var.private_subnet_cidrs)
-    vpc_id = aws_vpc.main.id
-    route {
-        cidr_block= "0.0.0.0/0"
-        nat_gateway_id = aws_nat_gateway.nat[count.index].id
-    }
-    tags = merge(var.tags, { Name = "${var.env}-private-route-table-${count.index + 1}"})
-}
-
-resource "aws_route_table_association" "private_routes" {
-    depends_on = [
-      aws_route_table.private-route-table,
-    ]
-    count = length(aws_subnet.private_subnet_main[*].id)
-    route_table_id = aws_route_table.private-route-table[count.index].id
-    subnet_id = element(aws_subnet.private_subnet_main[*].id,count.index)
-}
 
 #--------------------------------------------------------------------------------------------#
