@@ -11,3 +11,11 @@ IP-Restricted-VPC/PublicNetwork/.terraform.lock.hcl
 .gitignore
 IP-Restricted-VPC/PublicNetwork/.terraform/providers/registry.terraform.io/hashicorp/aws/3.49.0/darwin_amd64/terraform-provider-aws_v3.49.0_x5
 IP-Restricted-VPC/PublicNetwork/.terraform/terraform.tfstate
+S3Access/ProjectBeta/terraform.tfstate
+S3Access/ProjectBeta/.terraform.lock.hcl
+S3Access/ProjectBeta/terraform.tfstate.backup
+.gitignore
+.gitignore
+S3Access/ProjectBeta/.terraform/modules/modules.json
+.gitignore
+S3Access/ProjectBeta/.terraform/providers/registry.terraform.io/hashicorp/aws/3.49.0/darwin_amd64/terraform-provider-aws_v3.49.0_x5
